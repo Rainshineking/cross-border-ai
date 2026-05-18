@@ -1,0 +1,28 @@
+# Java
+backend/target/
+*.class
+*.jar
+*.war
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+.env
+!.env.example
+
+# Docker
+backend/target/

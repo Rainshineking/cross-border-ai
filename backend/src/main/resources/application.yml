@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+spring:
+  jackson:
+    default-property-inclusion: non_null
+  web:
+    async:
+      request-timeout: 300000
+
+dashscope:
+  api-key: ${DASHSCOPE_API_KEY:}
+  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  model: qwen-plus
+
+logging:
+  level:
+    com.crossborder: INFO
