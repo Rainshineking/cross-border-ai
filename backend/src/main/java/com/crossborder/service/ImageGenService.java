@@ -35,42 +35,58 @@ public class ImageGenService {
 
     public void generateImage(SseEmitter emitter, String prompt) {
         try {
-            // Send progress: submitting task
             sendEvent(emitter, "progress", "正在提交图片生成任务...");
 
-            // Step 1: Submit generation task
-            String taskId = submitTask(prompt);
-            log.info("Image task submitted: {}", taskId);
+            // Submit and get result
+            JsonNode responseNode = submitTask(prompt);
 
-            sendEvent(emitter, "progress", "任务已提交，正在生成图片...");
-
-            // Step 2: Poll for result
-            String imageUrl = pollTask(taskId, emitter);
+            // Try to extract image URL from response
+            String imageUrl = extractImageUrl(responseNode);
 
             if (imageUrl != null) {
-                // Return the image URL
+                // Got URL directly — no polling needed
+                sendEvent(emitter, "progress", "图片生成完成");
                 ObjectNode resultNode = objectMapper.createObjectNode();
                 resultNode.put("type", "image");
                 resultNode.put("url", imageUrl);
                 resultNode.put("prompt", prompt);
+                sendEvent(emitter, "message", objectMapper.writeValueAsString(resultNode));
+                sendEvent(emitter, "done", "[DONE]");
+                emitter.complete();
+                return;
+            }
 
+            // Check for task_id — need to poll
+            String taskId = extractTaskId(responseNode);
+            if (taskId == null) {
+                sendError(emitter, "无法解析图片生成结果");
+                return;
+            }
+
+            sendEvent(emitter, "progress", "任务已提交，正在生成图片...");
+            imageUrl = pollTask(taskId, emitter);
+
+            if (imageUrl != null) {
+                ObjectNode resultNode = objectMapper.createObjectNode();
+                resultNode.put("type", "image");
+                resultNode.put("url", imageUrl);
+                resultNode.put("prompt", prompt);
                 sendEvent(emitter, "message", objectMapper.writeValueAsString(resultNode));
                 sendEvent(emitter, "done", "[DONE]");
             } else {
-                sendEvent(emitter, "error", "{\"type\":\"error\",\"content\":\"图片生成失败\"}");
-                sendEvent(emitter, "done", "[DONE]");
+                sendError(emitter, "图片生成失败或超时");
             }
-
             emitter.complete();
+
         } catch (Exception e) {
             log.error("Image generation failed: {}", e.getMessage());
-            sendEvent(emitter, "error", "{\"type\":\"error\",\"content\":\"生成图片时出错: " + escapeJson(e.getMessage()) + "\"}");
-            sendEvent(emitter, "done", "[DONE]");
+            sendError(emitter, "生成图片时出错: " + e.getMessage());
             try { emitter.complete(); } catch (Exception ignored) {}
         }
     }
 
-    private String submitTask(String prompt) throws IOException, InterruptedException {
+    /** Submit image generation task to DashScope */
+    private JsonNode submitTask(String prompt) throws IOException, InterruptedException {
         ObjectNode requestBody = objectMapper.createObjectNode();
         requestBody.put("model", "z-image-turbo");
 
@@ -102,28 +118,61 @@ public class ImageGenService {
             .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        JsonNode responseNode = objectMapper.readTree(response.body());
-
-        // Check for task_id
-        JsonNode output = responseNode.get("output");
-        if (output != null && output.has("task_id")) {
-            return output.get("task_id").asText();
-        }
-
-        // Check for direct result (some models return directly)
-        if (output != null && output.has("results")) {
-            return "DIRECT_RESULT";
-        }
-
-        log.error("Unexpected response: {}", response.body());
-        throw new RuntimeException("Failed to submit image task: " + response.body());
+        return objectMapper.readTree(response.body());
     }
 
-    private String pollTask(String taskId, SseEmitter emitter) throws IOException, InterruptedException {
-        if ("DIRECT_RESULT".equals(taskId)) {
-            return null;
-        }
+    /** Extract image URL from direct response (choices format) */
+    private String extractImageUrl(JsonNode responseNode) {
+        try {
+            JsonNode output = responseNode.get("output");
+            if (output == null) return null;
 
+            // Format 1: output.choices[0].message.content[{image: "url"}]
+            JsonNode choices = output.get("choices");
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                JsonNode message = choices.get(0).get("message");
+                if (message != null) {
+                    JsonNode content = message.get("content");
+                    if (content != null && content.isArray()) {
+                        for (JsonNode item : content) {
+                            if (item.has("image")) {
+                                return item.get("image").asText();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Format 2: output.results[0].url
+            JsonNode results = output.get("results");
+            if (results != null && results.isArray() && results.size() > 0) {
+                JsonNode result = results.get(0);
+                if (result.has("url")) return result.get("url").asText();
+                if (result.has("image") && result.get("image").has("url")) {
+                    return result.get("image").get("url").asText();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract image URL: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /** Extract task_id for async polling */
+    private String extractTaskId(JsonNode responseNode) {
+        try {
+            JsonNode output = responseNode.get("output");
+            if (output != null && output.has("task_id")) {
+                return output.get("task_id").asText();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract task_id: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /** Poll for async task result */
+    private String pollTask(String taskId, SseEmitter emitter) throws IOException, InterruptedException {
         long startTime = System.currentTimeMillis();
 
         while (System.currentTimeMillis() - startTime < MAX_POLL_SECONDS * 1000L) {
@@ -139,21 +188,20 @@ public class ImageGenService {
             JsonNode responseNode = objectMapper.readTree(response.body());
             JsonNode output = responseNode.get("output");
 
-            if (output == null) {
-                log.warn("No output in poll response: {}", response.body());
-                continue;
-            }
+            if (output == null) continue;
 
             String status = output.has("task_status") ? output.get("task_status").asText() : "";
 
             switch (status) {
                 case "SUCCEEDED":
+                    // Try the same extraction on poll response
+                    String url = extractImageUrl(responseNode);
+                    if (url != null) return url;
+                    // Fallback: try results[0].url / image.url
                     if (output.has("results") && output.get("results").isArray()
                             && output.get("results").size() > 0) {
                         JsonNode result = output.get("results").get(0);
-                        if (result.has("url")) {
-                            return result.get("url").asText();
-                        }
+                        if (result.has("url")) return result.get("url").asText();
                         if (result.has("image") && result.get("image").has("url")) {
                             return result.get("image").get("url").asText();
                         }
@@ -162,8 +210,8 @@ public class ImageGenService {
                     return null;
 
                 case "FAILED":
-                    String errorMsg = output.has("message") ? output.get("message").asText() : "未知错误";
-                    log.error("Image task failed: {}", errorMsg);
+                    String errMsg = output.has("message") ? output.get("message").asText() : "未知错误";
+                    log.error("Image task failed: {}", errMsg);
                     return null;
 
                 case "CANCELED":
@@ -172,7 +220,6 @@ public class ImageGenService {
 
                 case "PENDING":
                 case "RUNNING":
-                    // Still in progress, continue polling
                     int elapsed = (int) ((System.currentTimeMillis() - startTime) / 1000);
                     sendEvent(emitter, "progress",
                         "{\"type\":\"progress\",\"content\":\"正在生成图片... (" + elapsed + "s)\"}");
@@ -193,6 +240,12 @@ public class ImageGenService {
         } catch (IOException e) {
             log.warn("Failed to send SSE event: {}", e.getMessage());
         }
+    }
+
+    private void sendError(SseEmitter emitter, String message) {
+        sendEvent(emitter, "error",
+            "{\"type\":\"error\",\"content\":\"" + escapeJson(message) + "\"}");
+        sendEvent(emitter, "done", "[DONE]");
     }
 
     private String escapeJson(String text) {
