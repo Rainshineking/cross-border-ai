@@ -19,3 +19,5 @@ jobs:
             git pull origin main
             docker compose up -d --build
             echo "Deploy completed at $(date)"
+          timeout: 600s
+          command_timeout: 600s
