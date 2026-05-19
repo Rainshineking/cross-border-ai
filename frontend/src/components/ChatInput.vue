@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 const emit = defineEmits<{
   send: [message: string]
+  generateImage: [prompt: string]
 }>()
 
 const props = defineProps<{
@@ -10,6 +11,8 @@ const props = defineProps<{
 }>()
 
 const input = ref('')
+const imageDialogVisible = ref(false)
+const imagePrompt = ref('')
 
 const quickActions = [
   { label: '选品推荐', icon: 'Search', prompt: '帮我推荐最近在亚马逊美国站热销的宠物用品' },
@@ -27,6 +30,18 @@ function handleSend() {
 function handleQuickAction(prompt: string) {
   if (props.disabled) return
   emit('send', prompt)
+}
+
+function openImageDialog() {
+  imagePrompt.value = ''
+  imageDialogVisible.value = true
+}
+
+function handleImageGenerate() {
+  const prompt = imagePrompt.value.trim()
+  if (!prompt || props.disabled) return
+  imageDialogVisible.value = false
+  emit('generateImage', prompt)
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -51,6 +66,16 @@ function handleKeydown(e: KeyboardEvent) {
       >
         {{ action.label }}
       </el-button>
+      <el-button
+        size="small"
+        icon="PictureFilled"
+        @click="openImageDialog"
+        :disabled="disabled"
+        round
+        type="success"
+      >
+        创意配图
+      </el-button>
     </div>
     <div class="input-wrapper">
       <el-input
@@ -74,6 +99,37 @@ function handleKeydown(e: KeyboardEvent) {
     <div class="input-footer">
       <span class="hint">按 Enter 发送，Shift+Enter 换行</span>
     </div>
+
+    <!-- Image Generation Dialog -->
+    <el-dialog
+      v-model="imageDialogVisible"
+      title="创意配图 - 文生图"
+      width="520px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div class="image-dialog-body">
+        <p class="image-dialog-hint">描述你想要生成的图片内容，AI 将根据描述自动生成广告图</p>
+        <el-input
+          v-model="imagePrompt"
+          type="textarea"
+          :rows="5"
+          placeholder="例如：一款智能猫砂盆在客厅中，现代简约风格，柔和的自然光线，白色背景，产品突出展示，适合亚马逊主图风格"
+          resize="none"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="imageDialogVisible = false">取消</el-button>
+        <el-button
+          type="success"
+          :disabled="!imagePrompt.trim()"
+          @click="handleImageGenerate"
+          :icon="'PictureFilled'"
+        >
+          开始生成
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -112,5 +168,16 @@ function handleKeydown(e: KeyboardEvent) {
 .hint {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.image-dialog-body {
+  padding: 8px 0;
+}
+
+.image-dialog-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.5;
 }
 </style>

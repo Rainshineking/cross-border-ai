@@ -1,12 +1,16 @@
 export interface ChatMessage {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'image'
   content: string
   timestamp?: number
+  imageUrl?: string   // for image messages
+  prompt?: string     // original prompt for image
 }
 
 export interface SSEEvent {
-  type: 'text' | 'product' | 'error' | 'done'
+  type: 'text' | 'image' | 'product' | 'error' | 'done' | 'progress'
   content: any
+  url?: string
+  prompt?: string
 }
 
 export interface Product {

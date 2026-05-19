@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ChatInput from '@/components/ChatInput.vue'
@@ -21,6 +21,12 @@ async function handleSend(message: string) {
   scrollToBottom()
 }
 
+async function handleGenerateImage(prompt: string) {
+  await chatStore.generateImage(prompt)
+  await nextTick()
+  scrollToBottom()
+}
+
 function scrollToBottom() {
   nextTick(() => {
     if (messagesContainer.value) {
@@ -35,9 +41,13 @@ function handleScroll() {
   isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 50
 }
 
-// Watch for content changes to scroll when streaming
-import { watch } from 'vue'
 watch(() => chatStore.streamingContent, () => {
+  if (isAtBottom.value) {
+    nextTick(scrollToBottom)
+  }
+})
+
+watch(() => chatStore.imageProgress, () => {
   if (isAtBottom.value) {
     nextTick(scrollToBottom)
   }
@@ -70,9 +80,9 @@ watch(() => chatStore.streamingContent, () => {
             <small>广告策略、渠道推荐、预算分配</small>
           </div>
           <div class="capability">
-            <el-icon :size="28"><EditPen /></el-icon>
-            <span>创意生成</span>
-            <small>广告文案、卖点提炼、关键词优化</small>
+            <el-icon :size="28"><PictureFilled /></el-icon>
+            <span>创意配图</span>
+            <small>AI 文生图，自动生成广告素材</small>
           </div>
         </div>
       </div>
@@ -81,15 +91,16 @@ watch(() => chatStore.streamingContent, () => {
       <div v-for="(msg, index) in chatStore.messages" :key="index">
         <ChatMessage
           :message="msg"
-          :is-streaming="chatStore.isLoading && index === chatStore.messages.length - 1"
+          :is-streaming="(chatStore.isLoading || chatStore.isGeneratingImage) && index === chatStore.messages.length - 1"
         />
       </div>
     </div>
 
     <!-- Input -->
     <ChatInput
-      :disabled="chatStore.isLoading"
+      :disabled="chatStore.isLoading || chatStore.isGeneratingImage"
       @send="handleSend"
+      @generate-image="handleGenerateImage"
     />
   </div>
 </template>

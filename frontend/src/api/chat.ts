@@ -76,3 +76,56 @@ export async function* streamChat(
     }
   }
 }
+
+export async function* streamImage(prompt: string): AsyncGenerator<SSEEvent> {
+  const response = await fetch(`${API_BASE}/generate-image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  })
+
+  if (!response.ok) {
+    yield { type: 'error', content: `图片生成请求失败: ${response.status}` }
+    return
+  }
+
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith(':')) continue
+
+      const colonIdx = trimmed.indexOf(':')
+      if (colonIdx === -1) continue
+
+      const field = trimmed.substring(0, colonIdx)
+      let val = trimmed.substring(colonIdx + 1)
+      if (val.startsWith(' ')) val = val.substring(1)
+
+      if (field !== 'data') continue
+
+      if (val === '[DONE]') {
+        yield { type: 'done', content: null }
+        continue
+      }
+
+      try {
+        const parsed = JSON.parse(val)
+        yield parsed as SSEEvent
+      } catch {
+        console.warn('Failed to parse SSE data:', val)
+      }
+    }
+  }
+}
