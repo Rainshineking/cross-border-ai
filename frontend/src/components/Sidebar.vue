@@ -29,8 +29,7 @@ function handleNewChat() {
           <span class="logo-icon">🌐</span>
         </div>
         <div class="logo-text">
-          <span class="logo-title">跨境选品</span>
-          <span class="logo-subtitle">小助手</span>
+          <span class="logo-title">国创智联</span>
         </div>
       </div>
     </div>
