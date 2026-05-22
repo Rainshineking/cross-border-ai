@@ -18,7 +18,6 @@ export const useChatStore = defineStore('chat', () => {
   async function sendMessage(content: string) {
     if (!content.trim() || isLoading.value) return
 
-    // Add user message
     messages.value.push({
       role: 'user',
       content: content.trim(),
@@ -28,33 +27,43 @@ export const useChatStore = defineStore('chat', () => {
     isLoading.value = true
     streamingContent.value = ''
 
-    // Add placeholder for assistant response
-    const assistantMsg: ChatMessage = {
+    const msgIndex = messages.value.length
+    messages.value.push({
       role: 'assistant',
       content: '',
       timestamp: Date.now()
-    }
-    messages.value.push(assistantMsg)
+    })
 
     try {
-      // Stream the response
       for await (const event of streamChat(content, sessionId.value)) {
         switch (event.type) {
           case 'text':
             streamingContent.value += event.content
-            assistantMsg.content = streamingContent.value
+            // Update through reactive array reference
+            messages.value[msgIndex] = {
+              ...messages.value[msgIndex],
+              content: streamingContent.value
+            }
             break
           case 'error':
-            assistantMsg.content = event.content || '抱歉，出错了，请稍后重试。'
+            messages.value[msgIndex] = {
+              ...messages.value[msgIndex],
+              content: event.content || '抱歉，出错了，请稍后重试。'
+            }
             break
           case 'done':
-            // Streaming complete, ensure final content is saved
-            assistantMsg.content = streamingContent.value
+            messages.value[msgIndex] = {
+              ...messages.value[msgIndex],
+              content: streamingContent.value
+            }
             break
         }
       }
     } catch (e: any) {
-      assistantMsg.content = '抱歉，网络请求失败，请检查网络后重试。'
+      messages.value[msgIndex] = {
+        ...messages.value[msgIndex],
+        content: '抱歉，网络请求失败，请检查网络后重试。'
+      }
     } finally {
       isLoading.value = false
       streamingContent.value = ''
@@ -64,7 +73,6 @@ export const useChatStore = defineStore('chat', () => {
   async function generateImage(prompt: string) {
     if (!prompt.trim() || isGeneratingImage.value) return
 
-    // Add user message
     messages.value.push({
       role: 'user',
       content: `🎨 生成图片：${prompt.trim()}`,
@@ -74,37 +82,50 @@ export const useChatStore = defineStore('chat', () => {
     isGeneratingImage.value = true
     imageProgress.value = ''
 
-    // Add placeholder message for the image result
-    const imageMsg: ChatMessage = {
+    // Track index so we can update through the reactive array
+    const imgIndex = messages.value.length
+    messages.value.push({
       role: 'image',
       content: '正在生成图片...',
       timestamp: Date.now()
-    }
-    messages.value.push(imageMsg)
+    })
 
     try {
       for await (const event of streamImage(prompt.trim())) {
         switch (event.type) {
           case 'progress':
             imageProgress.value = event.content || ''
-            imageMsg.content = imageProgress.value
+            messages.value[imgIndex] = {
+              ...messages.value[imgIndex],
+              content: imageProgress.value
+            }
             break
           case 'image':
-            // Image generated successfully
-            imageMsg.role = 'image'
-            imageMsg.content = '图片生成完成'
-            imageMsg.imageUrl = event.url
-            imageMsg.prompt = event.prompt || prompt.trim()
+            console.log('[ImageGen] received:', event)
+            messages.value[imgIndex] = {
+              role: 'image',
+              content: '图片生成完成',
+              imageUrl: event.url,
+              prompt: event.prompt || prompt.trim(),
+              timestamp: Date.now()
+            }
+            console.log('[ImageGen] updated message:', { ...messages.value[imgIndex] })
             break
           case 'error':
-            imageMsg.content = event.content || '图片生成失败，请稍后重试。'
+            messages.value[imgIndex] = {
+              ...messages.value[imgIndex],
+              content: event.content || '图片生成失败，请稍后重试。'
+            }
             break
           case 'done':
             break
         }
       }
     } catch (e: any) {
-      imageMsg.content = '图片生成请求失败，请检查网络后重试。'
+      messages.value[imgIndex] = {
+        ...messages.value[imgIndex],
+        content: '图片生成请求失败，请检查网络后重试。'
+      }
     } finally {
       isGeneratingImage.value = false
       imageProgress.value = ''

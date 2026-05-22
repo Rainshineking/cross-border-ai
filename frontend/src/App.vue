@@ -12,7 +12,7 @@ onMounted(() => {
 })
 
 function getPageTitle(): string {
-  return (route.meta?.title as string) || '跨境选品小助手'
+  return (route.meta?.title as string) || '国创智联'
 }
 </script>
 
@@ -20,11 +20,12 @@ function getPageTitle(): string {
   <div class="app-container">
     <Sidebar />
     <main class="main-content">
-      <header class="app-header">
-        <h1>{{ getPageTitle() }}</h1>
-      </header>
       <div class="content-area">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
     </main>
   </div>
@@ -42,22 +43,8 @@ function getPageTitle(): string {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-.app-header {
-  height: 56px;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  background: var(--card-bg);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.app-header h1 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
+  background: #ffffff;
+  position: relative;
 }
 
 .content-area {

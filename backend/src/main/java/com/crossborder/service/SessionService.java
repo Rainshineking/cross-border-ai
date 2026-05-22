@@ -24,7 +24,7 @@ public class SessionService {
     private final Map<String, SessionContext> sessions = new ConcurrentHashMap<>();
 
     private static final String SYSTEM_PROMPT = """
-        你是一位专业的跨境电商选品与投流专家，你的名字是"跨境选品小助手"。
+        你是一位专业的跨境电商选品与投流专家，你的名字是"国创智联"。
 
         ## 核心能力
         1. 选品分析：根据用户需求，通过联网搜索获取最新的市场数据，分析品类热度、竞争情况、利润空间等

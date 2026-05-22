@@ -26,207 +26,331 @@ function handleDownload() {
 </script>
 
 <template>
-  <div class="message-wrapper" :class="{
-    'is-user': isUser,
-    'is-assistant': !isUser && !isImage,
-    'is-image': isImage
+  <div class="message-row" :class="{
+    'row-user': isUser,
+    'row-assistant': !isUser && !isImage,
+    'row-image': isImage
   }">
-    <div class="message-avatar">
-      <el-avatar :size="36"
-        :icon="isUser ? 'UserFilled' : (isImage ? 'PictureFilled' : 'ChatDotSquare')"
-        :style="{ background: isUser ? '#1890ff' : (isImage ? '#722ed1' : '#52c41a') }" />
-    </div>
-    <div class="message-body">
-      <div class="message-role">
-        {{ isUser ? '你' : (isImage ? '创意配图' : '跨境选品小助手') }}
+    <!-- Assistant avatar (top-left of each assistant message group) -->
+    <div v-if="!isUser" class="row-avatar">
+      <div class="av-circle" :class="{ 'av-image': isImage }">
+        <el-icon :size="15">
+          <component :is="isImage ? 'PictureFilled' : 'ChatDotSquare'" />
+        </el-icon>
       </div>
-      <div class="message-content" :class="{ 'is-streaming': isStreaming }">
-        <!-- User message: plain text -->
-        <template v-if="isUser">
-          <div class="user-text">{{ message.content }}</div>
-        </template>
+    </div>
 
-        <!-- Image message -->
-        <template v-else-if="isImage">
-          <div v-if="!hasImageUrl && isStreaming" class="image-loading">
-            <el-icon class="loading-icon" :size="32"><PictureFilled /></el-icon>
-            <span>{{ message.content || '正在生成图片...' }}</span>
-          </div>
-          <div v-else-if="hasImageUrl" class="image-result">
-            <div class="image-wrapper">
-              <img :src="message.imageUrl" :alt="message.prompt || '生成图片'"
-                class="generated-image" @load="$emit('loaded')" />
+    <div class="row-body">
+      <!-- User message -->
+      <div v-if="isUser" class="msg user-msg">
+        <div class="user-text">{{ message.content }}</div>
+      </div>
+
+      <!-- Image message -->
+      <template v-else-if="isImage">
+        <div class="msg image-msg">
+          <div v-if="!hasImageUrl && isStreaming" class="img-loading">
+            <div class="img-spinner"></div>
+            <div class="img-loading-text">
+              <span class="img-loading-label">正在生成图片</span>
+              <span class="img-loading-dots">
+                <span class="idot"></span>
+                <span class="idot"></span>
+                <span class="idot"></span>
+              </span>
             </div>
-            <div v-if="message.prompt" class="image-prompt">
-              <el-icon><InfoFilled /></el-icon>
+            <span class="img-loading-hint">AI 正在创作中，请稍候...</span>
+          </div>
+          <div v-else-if="hasImageUrl" class="img-result">
+            <div class="img-wrap">
+              <img :src="message.imageUrl" :alt="message.prompt || '生成图片'"
+                class="img-show" />
+            </div>
+            <div v-if="message.prompt" class="img-prompt">
+              <el-icon :size="13"><InfoFilled /></el-icon>
               <span>{{ message.prompt }}</span>
             </div>
-            <div class="image-actions">
-              <el-button size="small" type="primary" @click="handleDownload" :icon="'Download'">
+            <div class="img-actions">
+              <button class="dl-btn" @click="handleDownload">
+                <el-icon :size="14"><Download /></el-icon>
                 查看原图
-              </el-button>
+              </button>
             </div>
           </div>
-          <div v-else class="image-error">
-            <el-icon :size="24" color="#ff4d4f"><WarningFilled /></el-icon>
+          <div v-else class="img-error">
+            <el-icon :size="18" color="#ff4d4f"><WarningFilled /></el-icon>
             <span>{{ message.content }}</span>
           </div>
-        </template>
+        </div>
+      </template>
 
-        <!-- Assistant message: rendered markdown -->
-        <template v-else>
-          <div v-if="!message.content && isStreaming" class="thinking">
-            <span class="dot-pulse"></span>
-          </div>
-          <div v-else class="chat-message-content" v-html="renderedContent"></div>
-        </template>
-      </div>
+      <!-- Assistant message -->
+      <template v-else>
+        <div class="msg assistant-msg">
+          <template v-if="isStreaming && !message.content">
+            <div class="thinking">
+              <span class="tdot"></span>
+              <span class="tdot"></span>
+              <span class="tdot"></span>
+            </div>
+          </template>
+          <template v-else-if="isStreaming">
+            <div class="chat-message-content streaming" v-html="renderedContent"></div>
+          </template>
+          <template v-else>
+            <div class="chat-message-content" v-html="renderedContent"></div>
+          </template>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped>
-.message-wrapper {
+.message-row {
   display: flex;
-  gap: 12px;
-  padding: 16px 24px;
-  max-width: 860px;
+  gap: 10px;
+  padding: 4px 24px;
+  max-width: 820px;
   margin: 0 auto;
   width: 100%;
+  animation: fadeIn 0.25s ease;
 }
 
-.message-wrapper.is-user {
-  flex-direction: row-reverse;
+.row-user {
+  justify-content: flex-end;
 }
 
-.message-body {
-  flex: 1;
+/* Avatar */
+.row-avatar {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.av-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: linear-gradient(135deg, #52c41a, #389e0d);
+  box-shadow: 0 1px 4px rgba(82, 196, 26, 0.25);
+}
+
+.av-image {
+  background: linear-gradient(135deg, #722ed1, #531dab);
+  box-shadow: 0 1px 4px rgba(114, 46, 209, 0.25);
+}
+
+/* Body */
+.row-body {
   min-width: 0;
-  max-width: calc(100% - 48px);
+  max-width: 78%;
 }
 
-.is-user .message-body {
+.row-user .row-body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
 }
 
-.message-role {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  font-weight: 500;
+/* Messages */
+.msg {
+  line-height: 1.65;
+  position: relative;
 }
 
-.message-content {
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 12px 16px;
-  line-height: 1.6;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.is-user .message-content {
-  background: var(--primary-color);
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-
-.is-assistant .message-content {
-  border-bottom-left-radius: 4px;
-}
-
-.is-streaming {
-  border-left: 3px solid var(--primary-color);
+/* User message — ChatGPT style: light gray bubble */
+.user-msg {
+  background: #f0f0f0;
+  color: var(--text-primary);
+  border-radius: 18px;
+  padding: 10px 16px;
+  font-size: 15.5px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .user-text {
   white-space: pre-wrap;
   word-break: break-word;
+  line-height: 1.6;
 }
 
+/* Assistant message — clean white, flat */
+.assistant-msg {
+  background: transparent;
+  padding: 4px 0;
+  font-size: 15.5px;
+}
+
+/* Thinking dots */
 .thinking {
   display: flex;
   align-items: center;
-  padding: 8px 0;
+  gap: 5px;
+  padding: 8px 4px;
 }
 
-.dot-pulse {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
+.tdot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--primary-color);
-  animation: pulse 1.5s ease-in-out infinite;
+  background: var(--text-muted);
+  animation: dotPulse 1.4s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
+.tdot:nth-child(2) { animation-delay: 0.16s; }
+.tdot:nth-child(3) { animation-delay: 0.32s; }
+
+/* Streaming cursor */
+.streaming::after {
+  content: '|';
+  display: inline;
+  animation: blink 0.7s step-end infinite;
+  color: var(--text-muted);
+  font-weight: 300;
+  margin-left: 1px;
 }
 
-/* Image message styles */
-.image-loading {
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Image message */
+.image-msg {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  box-shadow: var(--card-shadow);
+  min-width: 240px;
+}
+
+.img-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 24px;
+  gap: 14px;
+  padding: 32px 20px;
   color: var(--text-muted);
+  border: 1.5px dashed rgba(114, 46, 209, 0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(114, 46, 209, 0.02);
 }
 
-.loading-icon {
-  animation: spin 2s linear infinite;
+.img-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(114, 46, 209, 0.1);
+  border-top-color: #722ed1;
+  animation: imgSpin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
+@keyframes imgSpin {
   to { transform: rotate(360deg); }
 }
 
-.image-result {
+.img-loading-text {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.img-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.idot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #722ed1;
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.idot:nth-child(2) { animation-delay: 0.16s; }
+.idot:nth-child(3) { animation-delay: 0.32s; }
+
+.img-loading-hint {
+  font-size: 12px;
+  color: var(--text-placeholder);
+}
+
+.img-result {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.image-wrapper {
-  border-radius: 8px;
+.img-wrap {
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  max-height: 400px;
+  max-height: 360px;
   display: flex;
   justify-content: center;
   background: #f5f5f5;
 }
 
-.generated-image {
+.img-show {
   max-width: 100%;
-  max-height: 400px;
+  max-height: 360px;
   object-fit: contain;
-  cursor: pointer;
+  border-radius: var(--radius-sm);
 }
 
-.image-prompt {
+.img-prompt {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 5px;
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.4;
-  padding: 4px 0;
 }
 
-.image-actions {
+.img-prompt span { flex: 1; }
+
+.img-actions {
   display: flex;
-  gap: 8px;
-  padding-top: 4px;
+  gap: 6px;
 }
 
-.image-error {
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.dl-btn:hover {
+  background: var(--bg-color);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.img-error {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px;
+  padding: 6px;
   color: var(--danger-color);
+  font-size: 14px;
 }
 </style>

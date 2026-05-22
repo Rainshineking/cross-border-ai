@@ -9,31 +9,31 @@ defineProps<{
 <template>
   <div class="product-card">
     <div class="product-image">
-      <el-icon :size="48"><Goods /></el-icon>
+      <el-icon :size="36"><Goods /></el-icon>
     </div>
     <div class="product-info">
       <div class="product-name">{{ product.name }}</div>
       <div class="product-meta">
-        <el-tag size="small" type="primary">{{ product.platform }}</el-tag>
-        <el-tag v-if="product.competition" size="small" :type="product.competition === '低' ? 'success' : 'warning'">
+        <span class="meta-tag platform">{{ product.platform }}</span>
+        <span v-if="product.competition" class="meta-tag" :class="'comp-' + product.competition">
           竞争: {{ product.competition }}
-        </el-tag>
-        <el-tag v-if="product.score" size="small" :type="product.score >= 80 ? 'success' : 'info'">
+        </span>
+        <span v-if="product.score" class="meta-tag score" :class="product.score >= 80 ? 'score-high' : 'score-mid'">
           评分: {{ product.score }}
-        </el-tag>
+        </span>
       </div>
       <div class="product-details">
         <div v-if="product.price" class="detail-item">
-          <span class="label">价格</span>
-          <span class="value price">{{ product.price }}</span>
+          <span class="detail-label">价格</span>
+          <span class="detail-value price">{{ product.price }}</span>
         </div>
         <div v-if="product.monthlySales" class="detail-item">
-          <span class="label">月销量</span>
-          <span class="value">{{ product.monthlySales }}</span>
+          <span class="detail-label">月销量</span>
+          <span class="detail-value">{{ product.monthlySales }}</span>
         </div>
         <div v-if="product.rating" class="detail-item">
-          <span class="label">评分</span>
-          <span class="value">{{ product.rating }}/5</span>
+          <span class="detail-label">评分</span>
+          <span class="detail-value">{{ product.rating }}/5</span>
         </div>
       </div>
       <div v-if="product.reason" class="product-reason">
@@ -47,23 +47,25 @@ defineProps<{
 .product-card {
   display: flex;
   gap: 16px;
-  background: #fafafa;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--radius-md);
   padding: 16px;
   margin: 8px 0;
-  transition: box-shadow 0.2s;
+  transition: all var(--transition-normal);
+  box-shadow: var(--card-shadow);
 }
 
 .product-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
 }
 
 .product-image {
   width: 80px;
   height: 80px;
-  background: var(--primary-light);
-  border-radius: 8px;
+  background: var(--primary-bg);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +82,7 @@ defineProps<{
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .product-meta {
@@ -90,11 +92,49 @@ defineProps<{
   flex-wrap: wrap;
 }
 
+.meta-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.meta-tag.platform {
+  background: var(--primary-bg);
+  color: var(--primary-color);
+}
+
+.meta-tag.comp-低 {
+  background: var(--success-bg);
+  color: var(--success-color);
+}
+
+.meta-tag.comp-中 {
+  background: var(--warning-bg);
+  color: var(--warning-color);
+}
+
+.meta-tag.comp-高 {
+  background: var(--danger-bg);
+  color: var(--danger-color);
+}
+
+.meta-tag.score-high {
+  background: var(--success-bg);
+  color: var(--success-color);
+}
+
+.meta-tag.score-mid {
+  background: var(--warning-bg);
+  color: var(--warning-color);
+}
+
 .product-details {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .detail-item {
@@ -103,18 +143,18 @@ defineProps<{
   gap: 2px;
 }
 
-.label {
+.detail-label {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.value {
+.detail-value {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
 }
 
-.value.price {
+.detail-value.price {
   color: var(--danger-color);
   font-weight: 600;
 }
