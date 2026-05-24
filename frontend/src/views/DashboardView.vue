@@ -130,11 +130,11 @@ const categoryOption = ref({
         itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' }
       },
       data: [
-        { value: 32, name: '宠物用品', itemStyle: { color: '#1890ff' } },
-        { value: 25, name: '家居生活', itemStyle: { color: '#52c41a' } },
-        { value: 18, name: '运动户外', itemStyle: { color: '#faad14' } },
-        { value: 15, name: '美妆个护', itemStyle: { color: '#ff4d4f' } },
-        { value: 10, name: '电子配件', itemStyle: { color: '#722ed1' } }
+        { value: 28, name: '家居生活', itemStyle: { color: '#1890ff' } },
+        { value: 25, name: '运动户外', itemStyle: { color: '#52c41a' } },
+        { value: 22, name: '美妆个护', itemStyle: { color: '#ff4d4f' } },
+        { value: 18, name: '电子配件', itemStyle: { color: '#722ed1' } },
+        { value: 7, name: '宠物用品', itemStyle: { color: '#faad14' } }
       ]
     }
   ]
@@ -150,7 +150,7 @@ const trendComparisonOption = ref({
     textStyle: { color: '#1a1a2e', fontSize: 12 }
   },
   legend: {
-    data: ['宠物用品', '家居生活', '运动户外'],
+    data: ['家居生活', '运动户外', '美妆个护'],
     bottom: 0,
     icon: 'circle',
     itemWidth: 8,
@@ -174,26 +174,15 @@ const trendComparisonOption = ref({
   },
   series: [
     {
-      name: '宠物用品',
-      type: 'line',
-      smooth: true,
-      symbol: 'circle',
-      symbolSize: 6,
-      data: [120, 132, 150, 180, 210, 260],
-      lineStyle: { color: '#1890ff', width: 2.5 },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(24,144,255,0.15)' }, { offset: 1, color: 'rgba(24,144,255,0.02)' }] } },
-      itemStyle: { color: '#1890ff' }
-    },
-    {
       name: '家居生活',
       type: 'line',
       smooth: true,
       symbol: 'circle',
       symbolSize: 6,
-      data: [100, 115, 130, 145, 160, 175],
-      lineStyle: { color: '#52c41a', width: 2.5 },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(82,196,26,0.15)' }, { offset: 1, color: 'rgba(82,196,26,0.02)' }] } },
-      itemStyle: { color: '#52c41a' }
+      data: [150, 165, 180, 210, 240, 285],
+      lineStyle: { color: '#1890ff', width: 2.5 },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(24,144,255,0.15)' }, { offset: 1, color: 'rgba(24,144,255,0.02)' }] } },
+      itemStyle: { color: '#1890ff' }
     },
     {
       name: '运动户外',
@@ -201,21 +190,32 @@ const trendComparisonOption = ref({
       smooth: true,
       symbol: 'circle',
       symbolSize: 6,
-      data: [80, 90, 105, 120, 140, 155],
-      lineStyle: { color: '#faad14', width: 2.5 },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(250,173,20,0.15)' }, { offset: 1, color: 'rgba(250,173,20,0.02)' }] } },
-      itemStyle: { color: '#faad14' }
+      data: [130, 145, 155, 170, 195, 220],
+      lineStyle: { color: '#52c41a', width: 2.5 },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(82,196,26,0.15)' }, { offset: 1, color: 'rgba(82,196,26,0.02)' }] } },
+      itemStyle: { color: '#52c41a' }
+    },
+    {
+      name: '美妆个护',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      data: [110, 125, 140, 160, 175, 200],
+      lineStyle: { color: '#ff4d4f', width: 2.5 },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(255,77,79,0.15)' }, { offset: 1, color: 'rgba(255,77,79,0.02)' }] } },
+      itemStyle: { color: '#ff4d4f' }
     }
   ]
 })
 
 // 4. Recommendations
 const recommendations = ref([
-  { name: '智能猫砂盆', platform: 'Amazon', price: '$89.99', score: 85, competition: '中', trend: 'up' },
-  { name: '自动喂食器', platform: 'Amazon', price: '$59.99', score: 82, competition: '高', trend: 'up' },
-  { name: '宠物摄像头', platform: 'Temu', price: '$35.99', score: 78, competition: '中', trend: 'up' },
-  { name: '智能饮水机', platform: 'Amazon', price: '$45.99', score: 76, competition: '高', trend: 'stable' },
-  { name: '宠物毛发梳', platform: 'Temu', price: '$12.99', score: 72, competition: '低', trend: 'up' }
+  { name: '便携式榨汁杯', platform: 'Amazon', price: '$24.99', score: 91, competition: '中', trend: 'up' },
+  { name: '瑜伽健身弹力带套装', platform: 'Amazon', price: '$15.99', score: 88, competition: '低', trend: 'up' },
+  { name: 'LED化妆镜带灯', platform: 'Shopee', price: '$19.99', score: 84, competition: '中', trend: 'up' },
+  { name: '无线蓝牙运动耳机', platform: 'Temu', price: '$28.99', score: 81, competition: '高', trend: 'stable' },
+  { name: '可折叠手机支架', platform: 'Amazon', price: '$9.99', score: 76, competition: '低', trend: 'up' }
 ])
 
 function scoreColor(score: number): string {
