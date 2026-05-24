@@ -81,6 +81,9 @@ public class DashScopeService {
 
             String jsonBody = objectMapper.writeValueAsString(requestBody);
 
+            log.info("DashScope request: model={}, url={}, messages={}",
+                model, baseUrl + "/chat/completions", messagesArray.size());
+
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/chat/completions"))
                 .header("Authorization", "Bearer " + apiKey)
@@ -91,6 +94,25 @@ public class DashScopeService {
 
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
                 .thenAccept(response -> {
+                    int statusCode = response.statusCode();
+                    if (statusCode != 200) {
+                        // Read error body
+                        try (BufferedReader reader = new BufferedReader(
+                                new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
+                            String errorBody = reader.lines().collect(java.util.stream.Collectors.joining("\n"));
+                            log.error("DashScope API returned status {}: {}", statusCode, errorBody);
+                        } catch (IOException ex) {
+                            log.error("DashScope API returned status {}, failed to read body", statusCode);
+                        }
+                        try {
+                            emitter.send(SseEmitter.event()
+                                .name("error")
+                                .data("{\"type\":\"error\",\"content\":\"AI服务暂时不可用，请稍后重试 (HTTP " + statusCode + ")\"}"));
+                        } catch (IOException e) {}
+                        try { emitter.complete(); } catch (Exception e) {}
+                        return;
+                    }
+
                     StringBuilder fullResponse = new StringBuilder();
                     try (BufferedReader reader = new BufferedReader(
                             new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
@@ -108,7 +130,7 @@ public class DashScopeService {
                                         JsonNode delta = choices.get(0).get("delta");
                                         if (delta != null) {
                                             JsonNode content = delta.get("content");
-                                            if (content != null && !content.asText().isEmpty()) {
+                                            if (content != null && !content.isNull() && !content.asText().isEmpty()) {
                                                 String text = content.asText();
                                                 fullResponse.append(text);
                                                 SseEmitter.SseEventBuilder event = SseEmitter.event()
